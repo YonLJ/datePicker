@@ -1,183 +1,259 @@
-/*jshint multistr: true */
+const today = new Date;
 
-/**
- * @param  {string} input 绑定的input元素id 必填
- * @param  {string} div 日历组件的id 必填
- * @param  {string} year 初始化年份 选填
- * @param  {string} month 初始化月份 选填
- */
-function datePicker(input, div, year, month) {
-    if (!year || !month) {
-        var today = new Date();
-        year = today.getFullYear();
-        month = today.getMonth() + 1;
-    }
-    this.year = year;
-    this.month = month;
-    this.$input = document.getElementById(input);
-    this.div = div;
-}
-datePicker.prototype.getMonthData = function (year, month) {
+class DatePicker {
+  /**
+  * @param {string} input 绑定的input元素id
+  * @param {string} div 日历组件的id
+  * @param {string} year 初始化年份
+  * @param {string} month 初始化月份
+  * @param {string} format 格式化模板
+  */
+  constructor(input, datePickerId, year = today.getFullYear(), month = today.getMonth() + 1, format = 'yyyy-MM-dd') {
+    this.initYear = this.year = year;
+    this.initMonth = this.month = month;
+    this.EInput = document.getElementById(input);
+    this.datePickerId = datePickerId;
+    this.EDatePicker = null;
+    this.monthData = null;
+    this.pickerShow = false;
+    this.format = format;
+    this.init();
+  }
 
-    if (!year || !month) {
-        year = this.year;
-        month = this.month;
-    }
+  init() {
+    this.getMonthData();
+    this.buildMonthData();
+    this.addEventListener();
+  }
 
-    var ret = [],
-        flag = false,
-        firstDay = new Date(year, month - 1, 1), //本月第一天
-        firstDayWeekDay = firstDay.getDay(), //本月第一天是星期几
-        lastDayOfLastMonth = new Date(year, month - 1, 0), //上个月最后一天
-        lastDateOfLastMonth = lastDayOfLastMonth.getDate(),
-        preMonthDayCount = firstDayWeekDay, //上个月天数在本月出现的数量
-        lastDay = new Date(year, month, 0), //本月最后一天
-        lastDate = lastDay.getDate(), //
-        showYear,
-        showMonth,
-        showDate;
-    for (var i = 0; i < 7 * 6; i++) {
-        var date = i + 1 - preMonthDayCount;
-        if (date <= 0) {
-            showDate = lastDateOfLastMonth + date;
-            showMonth = firstDay.getMonth();
-            showYear = this.year;
-            if (showMonth <= 0) {
-                showMonth = 12;
-                showYear = this.year - 1;
-            }
-        } else if (date > lastDate) {
-            showDate = date - lastDate;
-            showMonth = firstDay.getMonth() + 2;
-            showYear = this.year;
-            var D = new Date(year, showMonth - 1, showDate);
-            if (D.getDay() == 6) {
-                flag = true;
-            }
-            if (showMonth > 12) {
-                showMonth = 1;
-                showYear = this.year + 1;
-            }
-        } else {
-            showDate = date;
-            showMonth = firstDay.getMonth() + 1;
-            if (date == lastDate && lastDay.getDay() == 6) {
-                flag = true;
-            }
-            showYear = this.year;
+  getMonthData() {
+    const ret = [];
+    const firstDay = new Date(this.year, this.month - 1, 1); //本月第一天
+    const firstDayWeekDay = firstDay.getDay(); //本月第一天是星期几
+    const lastDayOfLastMonth = new Date(this.year, this.month - 1, 0); //上个月最后一天
+    const lastDateOfLastMonth = lastDayOfLastMonth.getDate();
+    const preMonthDayCount = firstDayWeekDay; //上个月天数在本月出现的数量
+    const lastDay = new Date(this.year, this.month, 0); //本月最后一天
+    const lastDate = lastDay.getDate(); //
+    for (let i = 0; i < 7 * 6; i++) {
+      const date = i + 1 - preMonthDayCount;
+      let showYear;
+      let showMonth;
+      let showDate;
+      let color = 'inherit';
+      if (date <= 0) { // i是上个月
+        color = '#c0c4cc';
+        showDate = lastDateOfLastMonth + date;
+        showMonth = firstDay.getMonth();
+        showYear = this.year;
+        if (showMonth <= 0) {
+          showMonth = 12;
+          showYear = this.year - 1;
         }
-        ret.push({
-            showYear: showYear,
-            showDate: showDate,
-            showMonth: showMonth
-        });
-        if (flag) {
-            break;
+      } else if (date > lastDate) { // i是下个月
+        color = '#c0c4cc';
+        showDate = date - lastDate;
+        showMonth = firstDay.getMonth() + 1 + 1;
+        showYear = this.year;
+        if (showMonth > 12) {
+          showMonth = 1;
+          showYear = this.year + 1;
         }
+        // const D = new Date(year, showMonth - 1, showDate);
+        // if (D.getDay() == 6) {
+        //   flag = true;
+        // }
+      } else { //i是本月
+        showDate = date;
+        showMonth = firstDay.getMonth() + 1;
+        showYear = this.year;
+        if (today.getFullYear() === showYear && today.getMonth() + 1 === showMonth && today.getDate() === showDate) {
+          color = '#1abc9c';
+        }
+        // if (date === lastDate && lastDay.getDay() === 6) {
+        //   flag = true;
+        // }
+      }
+      ret.push({ showYear, showDate, showMonth, color });
+      // if (flag) {
+      //   break;
+      // }
     }
     this.monthData = ret;
-};
+  }
 
-datePicker.prototype.buildMonthData = function () {
-    var html = '<div class="ui-datepicker-header">\
-                    <a href="#" class="ui-datepicker-btn ui-datepicker-btn-l">&lt;</a>\
-                    <span class="ui-datepicker-curmon">' + this.year + '-' + this.month + '</span><!--\
-                    --><a href="#" class="ui-datepicker-btn ui-datepicker-btn-r">&gt;</a>\
-                </div>\
-                <div class="ui-datepicker-body">\
-                    <table>\
-                        <thead>\
-                            <tr>\
-                                <th>日</th>\
-                                <th>一</th>\
-                                <th>二</th>\
-                                <th>三</th>\
-                                <th>四</th>\
-                                <th>五</th>\
-                                <th>六</th>\
-                            </tr>\
-                        </thead>\
-                     <tbody>';
-    var weekCount = Math.ceil(this.monthData.length / 7);
-    for (var i = 0; i < weekCount; i++) {
-        html += '<tr>\
-                    <td data-month="' + this.monthData[i * 7].showMonth + '" data-year="' + this.monthData[i * 7].showYear + '">' + this.monthData[i * 7].showDate + '</td>\
-                    <td data-month="' + this.monthData[i * 7 + 1].showMonth + '" data-year="' + this.monthData[i * 7 + 1].showYear + '">' + this.monthData[i * 7 + 1].showDate + '</td>\
-                    <td data-month="' + this.monthData[i * 7 + 2].showMonth + '" data-year="' + this.monthData[i * 7 + 2].showYear + '">' + this.monthData[i * 7 + 2].showDate + '</td>\
-                    <td data-month="' + this.monthData[i * 7 + 3].showMonth + '" data-year="' + this.monthData[i * 7 + 3].showYear + '">' + this.monthData[i * 7 + 3].showDate + '</td>\
-                    <td data-month="' + this.monthData[i * 7 + 4].showMonth + '" data-year="' + this.monthData[i * 7 + 4].showYear + '">' + this.monthData[i * 7 + 4].showDate + '</td>\
-                    <td data-month="' + this.monthData[i * 7 + 5].showMonth + '" data-year="' + this.monthData[i * 7 + 5].showYear + '">' + this.monthData[i * 7 + 5].showDate + '</td>\
-                    <td data-month="' + this.monthData[i * 7 + 6].showMonth + '" data-year="' + this.monthData[i * 7 + 6].showYear + '">' + this.monthData[i * 7 + 6].showDate + '</td>\
-                </tr>';
+  buildMonthData() {
+    let html = `<div class="ui-datepicker-header">
+                  <span>
+                    <a href="#" class="ui-datepicker-btn ui-datepicker-btn-last-year">«</a>
+                    <a href="#" class="ui-datepicker-btn ui-datepicker-btn-last-month">‹</a>
+                  </span>
+                  <span class="ui-datepicker-curmon">${this.year}年${this.month}月</span>
+                  <span>
+                    <a href="#" class="ui-datepicker-btn ui-datepicker-btn-next-month">›</a>
+                    <a href="#" class="ui-datepicker-btn ui-datepicker-btn-next-year">»</a>
+                  </span>
+                </div>
+                <div class="ui-datepicker-body">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>日</th>
+                        <th>一</th>
+                        <th>二</th>
+                        <th>三</th>
+                        <th>四</th>
+                        <th>五</th>
+                        <th>六</th>
+                      </tr>
+                    </thead>
+                  <tbody>`;
+    const weekCount = Math.ceil(this.monthData.length / 7);
+    for (let i = 0; i < weekCount; i++) {
+      html += `
+<tr>
+  <td style="color: ${this.monthData[i * 7].color}" data-month="${this.monthData[i * 7].showMonth}" data-year="${this.monthData[i * 7].showYear}">${this.monthData[i * 7].showDate}</td>
+  <td style="color: ${this.monthData[i * 7 + 1].color}" data-month="${this.monthData[i * 7 + 1].showMonth}" data-year="${this.monthData[i * 7 + 1].showYear}">${this.monthData[i * 7 + 1].showDate}</td>
+  <td style="color: ${this.monthData[i * 7 + 2].color}" data-month="${this.monthData[i * 7 + 2].showMonth}" data-year="${this.monthData[i * 7 + 2].showYear}">${this.monthData[i * 7 + 2].showDate}</td>
+  <td style="color: ${this.monthData[i * 7 + 3].color}" data-month="${this.monthData[i * 7 + 3].showMonth}" data-year="${this.monthData[i * 7 + 3].showYear}">${this.monthData[i * 7 + 3].showDate}</td>
+  <td style="color: ${this.monthData[i * 7 + 4].color}" data-month="${this.monthData[i * 7 + 4].showMonth}" data-year="${this.monthData[i * 7 + 4].showYear}">${this.monthData[i * 7 + 4].showDate}</td>
+  <td style="color: ${this.monthData[i * 7 + 5].color}" data-month="${this.monthData[i * 7 + 5].showMonth}" data-year="${this.monthData[i * 7 + 5].showYear}">${this.monthData[i * 7 + 5].showDate}</td>
+  <td style="color: ${this.monthData[i * 7 + 6].color}" data-month="${this.monthData[i * 7 + 6].showMonth}" data-year="${this.monthData[i * 7 + 6].showYear}">${this.monthData[i * 7 + 6].showDate}</td>
+</tr>`;
     }
 
-    html += '</tbody>\
-        </table>\
-    </div>';
+    html += `
+    </tbody>
+  </table>
+</div>`;
     this.render(html);
-};
+  }
 
-datePicker.prototype.render = function (html) {
-    var picker = document.getElementById(this.div);
-    if (!picker) {
-        picker = document.createElement('div');
-        picker.className = 'ui-datepicker-wrapper ui-datepicker-wrapper-hide';
-        picker.id = this.div;
-        document.body.appendChild(picker);
+  /**
+   * @param {string} html 
+   */
+  render(html) {
+    this.EDatePicker = document.getElementById(this.datePickerId);
+    if (!this.EDatePicker) {
+      this.EDatePicker = document.createElement('div');
+      this.EDatePicker.className = 'ui-datepicker-wrapper ui-datepicker-wrapper-hide';
+      this.EDatePicker.id = this.datePickerId;
+      document.body.appendChild(this.EDatePicker);
     }
-    picker.innerHTML = html;
-    this.$div = picker;
-};
+    this.EDatePicker.innerHTML = html;
+  }
 
-datePicker.prototype.addEvent = function (html) {
-    var _this = this;
-    var showFlag = false;
-    this.$input.addEventListener('click', function (event) {
-        if (showFlag) {
-            _this.$div.className = 'ui-datepicker-wrapper ui-datepicker-wrapper-hide';
-        } else {
-            _this.$div.className = 'ui-datepicker-wrapper';
-            var top = this.offsetTop;
-            var left = this.offsetLeft;
-            var height = this.offsetHeight;
-            _this.$div.style.top = top + height + 'px';
-            _this.$div.style.left = left + 2 + 'px';
-        }
-        showFlag = !showFlag;
-        event.stopPropagation();
+  addEventListener() {
+    this.inputAddEventListener();
+    this.datePickerAddEventListener();
+    this.documentAddEventListener();
+  }
+
+  documentAddEventListener() {
+    document.addEventListener('click', event => {
+      event.stopPropagation();
+      this.hideDatePicker();
     }, false);
+  }
 
-    _this.$div.addEventListener('click', function (event) {
-        if (event.target.className.indexOf('ui-datepicker-btn') >= 0) {
-            if (event.target.className.indexOf('ui-datepicker-btn-l') >= 0) {
-                _this.month--;
-                if (_this.month <= 0) {
-                    _this.month = 12;
-                    _this.year--;
-                }
-            } else {
-                _this.month++;
-                if (_this.month > 12) {
-                    _this.month = 1;
-                    _this.year++;
-                }
-            }
-            _this.getMonthData();
-            _this.buildMonthData();
-        }
-        console.log(event.target.tagName);
-        if (event.target.tagName.toLowerCase() == 'td') {
-            var td = event.target;
-            _this.$input.value = td.dataset.year + '-' + td.dataset.month + '-' + td.innerHTML;
-            _this.$div.className = 'ui-datepicker-wrapper ui-datepicker-wrapper-hide';
-            showFlag = !showFlag;
-        }
-        event.stopPropagation();
+  inputAddEventListener() {
+    this.EInput.addEventListener('click', () => {
+      if (this.pickerShow) {
+        this.EDatePicker.className = 'ui-datepicker-wrapper ui-datepicker-wrapper-hide';
+      } else {
+        this.EDatePicker.className = 'ui-datepicker-wrapper';
+        this.EDatePicker.style.top = `${this.EInput.offsetTop + this.EInput.offsetHeight}px`;
+        this.EDatePicker.style.left = `${this.EInput.offsetLeft}px`;
+      }
+      this.pickerShow = !this.pickerShow;
+      event.stopPropagation();
     }, false);
-};
+  }
 
-datePicker.prototype.init = function () {
-    this.getMonthData(this.year, this.month);
+  datePickerAddEventListener() {
+    this.EDatePicker.addEventListener('click', event => {
+      event.stopPropagation();
+      if (event.target.className.includes('ui-datepicker-btn-last-month')) {
+        this.handleLastMonthBtnClick();
+      }
+      if (event.target.className.includes('ui-datepicker-btn-next-month')) {
+        this.handleNextMonthBtnClick();
+      }
+      if (event.target.className.includes('ui-datepicker-btn-last-year')) {
+        this.handleLastYearBtnClick();
+      }
+      if (event.target.className.includes('ui-datepicker-btn-next-year')) {
+        this.handleNextYearBtnClick();
+      }
+      if (event.target.tagName.toLowerCase() === 'td') {
+        this.handleDateTdClick();
+      }
+    }, false);
+  }
+
+  handleLastMonthBtnClick() {
+    this.month--;
+    if (this.month <= 0) {
+      this.month = 12;
+      this.year--;
+    }
+    this.getMonthData();
     this.buildMonthData();
-    this.addEvent();
-};
+  }
+
+  handleNextMonthBtnClick() {
+    this.month++;
+    if (this.month > 12) {
+      this.month = 1;
+      this.year++;
+    }
+    this.getMonthData();
+    this.buildMonthData();
+  }
+
+  handleLastYearBtnClick() {
+    this.year--;
+    this.getMonthData();
+    this.buildMonthData();
+  }
+
+  handleNextYearBtnClick() {
+    this.year++;
+    this.getMonthData();
+    this.buildMonthData();
+  }
+
+  handleDateTdClick() {
+    const td = event.target;
+    this.EInput.value = this.formatDate(td.dataset.year, td.dataset.month, td.innerHTML);
+    this.hideDatePicker();
+  }
+
+  hideDatePicker() {
+    this.EDatePicker.className = 'ui-datepicker-wrapper ui-datepicker-wrapper-hide';
+    this.pickerShow = false;
+    this.year = this.initYear;
+    this.month = this.initMonth;
+    this.getMonthData();
+    this.buildMonthData();
+  }
+
+  /**
+   * 
+   * @param {number} year 
+   * @param {number} month 
+   * @param {number} date 
+   * @returns {string}
+   */
+  formatDate(year, month, date) {
+    let result = this.format.replace('yyyy', year);
+    result = result.includes('MM') ? result.replace('MM', this.formatNumber(month)) : result.replace('M', month);
+    result = result.includes('dd') ? result.replace('dd', this.formatNumber(date)) : result.replace('d', date);
+    return result;
+  }
+
+  formatNumber(n) {
+    n = n.toString();
+    return n[1] ? n : '0' + n;
+  }
+}

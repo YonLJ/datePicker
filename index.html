@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./datePicker.css">
     <title>datepicker</title>
 </head>
 
@@ -13,9 +13,8 @@
     <input type="text" id="date">
     <script src="./datePicker.js"></script>
     <script>
-        // 输入要绑定的input元素id和创建日历组件的id，调用init方法
-        var date = new datePicker('date', 'dateP');
-        date.init();
+        // 输入要绑定的input元素id和创建日历组件的id
+        const date = new DatePicker('date', 'datePicker', 2020, 6,'yyyy/M/d');
     </script>
 </body>
 
